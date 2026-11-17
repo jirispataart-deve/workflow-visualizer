@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Document approval flowchart</title>
+<style>
+  /* Layout: one column, axis on the left, phases with marker bars, steps as entries along the axis.
+     Deliberately single-theme: all colors are set explicitly so it reads the same in light and dark UIs.
+     To use your own brand, change only the tokens in :root. */
+  :root {
+    --paper: #f6f5f1;
+    --paper-shade: #e7e5dd;
+    --rule: #d3d1c9;
+    --ink: #1a1a1a;
+    --graphite: #4b4b49;
+    --accent: #cfe0ff;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--graphite);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+    padding-block: 40px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  /* Header */
+  .kicker {
+    margin: 0 0 12px;
+    font-size: 12px; font-weight: 400; letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--graphite);
+  }
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(28px, 7vw, 44px); font-weight: 300; line-height: 1.1; color: var(--ink);
+    text-wrap: balance;
+  }
+  h1 b { font-weight: 700; }
+  .lead { margin: 0; font-size: 16px; line-height: 1.65; color: var(--ink); max-width: 62ch; }
+
+  /* Legend */
+  .legend { margin-top: 40px; border-top: 2px solid var(--ink); padding-top: 16px; }
+  .legend h2, .phase h2 {
+    margin: 0 0 12px;
+    font-size: 14px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink);
+  }
+  .legend ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px 24px; }
+  .legend li { display: flex; align-items: center; gap: 12px; font-size: 13px; line-height: 1.35; }
+  .legend li b { color: var(--ink); font-weight: 700; letter-spacing: 0.04em; }
+
+  /* Symbols (all angular, drawn in CSS) */
+  .sym { flex: none; width: 14px; height: 14px; display: inline-block; }
+  .sym.action { background: var(--ink); }
+  .sym.decision { border: 2px solid var(--ink); background: var(--paper); }
+  .sym.checkpoint { background: var(--ink); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .sym.handoff { background: var(--ink); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  .sym.wait { height: 6px; background: var(--ink); margin-block: 4px; }
+  .sym.open { border: 2px dashed var(--graphite); background: var(--paper); }
+
+  /* Phases */
+  .phase { margin-top: 48px; }
+  .phase h2 { position: relative; display: inline-block; z-index: 0; margin-bottom: 24px; }
+  .phase h2::before {
+    content: ""; position: absolute; left: -6px; right: -6px; bottom: 0; height: 10px;
+    background: var(--accent); z-index: -1;
+  }
+
+  /* Axis */
+  .axis { list-style: none; margin: 0; padding: 0 0 0 32px; position: relative; }
+  .axis::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--ink); }
+  .step { position: relative; padding-bottom: 40px; min-width: 0; }
+  .step:last-child { padding-bottom: 0; }
+  .step > .sym { position: absolute; left: -32px; top: 4px; background-clip: padding-box; outline: 6px solid var(--paper); }
+  .when { margin: 0 0 4px; font-size: 17px; font-weight: 700; letter-spacing: 0.02em; line-height: 1.2; color: var(--ink); }
+  .step h3 { margin: 0 0 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.35; color: var(--ink); }
+  .step p { margin: 0; max-width: 62ch; }
+
+  /* Info boxes */
+  .box { margin-top: 14px; max-width: 62ch; padding: 12px 16px; font-size: 14px; line-height: 1.55; }
+  .box .label { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink); }
+  .box.important { background: var(--paper-shade); color: var(--ink); }
+  .box.concrete { border: 1px solid var(--ink); color: var(--ink); }
+
+  /* Open points */
+  .open-list { margin: 48px 0 0; border-top: 1px solid var(--rule); padding-top: 16px; }
+  .open-list h2 { margin: 0 0 10px; font-size: 14px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink); }
+  .open-list ul { margin: 0; padding: 0; list-style: none; }
+  .open-list li { position: relative; padding-left: 18px; margin-bottom: 6px; font-size: 14px; }
+  .open-list li::before { content: ""; position: absolute; left: 0; top: 9px; width: 5px; height: 5px; background: var(--ink); }
+</style>
+<style>
+  /* Flowchart: one vertical column, location of each step as a chip, loop-back as a bracket on the left.
+     The bracket is built from three segments (head, body, tail) so it attaches at the middle of the
+     first and the last box without any script. */
+  .fc { margin-top: 8px; }
+  .node { position: relative; border: 2px solid var(--ink); background: var(--paper); padding: 14px 16px; min-width: 0; }
+  .node.decision { background: var(--paper-shade); }
+  .node-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin-bottom: 8px; }
+  .node-head .sym { flex: none; }
+  .node-head .when { margin: 0; font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1.2; }
+  .chip { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; padding: 3px 4px 3px 11px; color: var(--ink); }
+  .chip.local { border: 1px solid var(--ink); background: var(--paper); }
+  .chip.remote { background: var(--ink); color: var(--paper); }
+  .chip.review { background: var(--accent); color: var(--ink); }
+  .node h3 { margin: 0 0 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.35; color: var(--ink); }
+  .node p { margin: 0; font-size: 14px; max-width: 62ch; }
+  .node .box { margin-top: 12px; }
+  .outs { margin: 12px 0 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.5; color: var(--ink); }
+  .outs li { position: relative; padding-left: 18px; margin-bottom: 6px; }
+  .outs li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; background: var(--ink); }
+  .outs b { font-weight: 700; letter-spacing: 0.04em; }
+
+  .link { width: 2px; height: 22px; background: var(--ink); }
+  .fc > .link { margin-left: 44px; }
+  .loop .link { margin-left: 20px; }
+  .fc > .node { margin-left: 24px; }
+  .exit { display: flex; align-items: center; gap: 12px; margin-left: 44px; }
+  .exit .link { margin-left: 0; height: 34px; }
+  .exit .tag { font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink); }
+
+  .loop-head, .loop-body, .loop-tail { position: relative; padding-left: 24px; }
+  .loop-head::before { content: ""; position: absolute; left: 0; top: 50%; bottom: 0; width: 2px; background: var(--ink); }
+  .loop-head::after, .loop-tail::after { content: ""; position: absolute; left: 0; top: calc(50% - 1px); width: 24px; height: 2px; background: var(--ink); }
+  .loop-head .arrow { position: absolute; left: 12px; top: calc(50% - 6px); width: 10px; height: 12px; background: var(--ink); clip-path: polygon(0 0, 100% 50%, 0 100%); z-index: 1; }
+  .loop-body::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+  .loop-tail::before { content: ""; position: absolute; left: 0; top: 0; height: 50%; width: 2px; background: var(--ink); }
+
+  .legend .chip { margin-left: 0; flex: none; }
+  .sym.loopback { border: 2px solid var(--ink); border-right: none; background: var(--paper); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="kicker">Workflow</p>
+    <h1><b>Document approval</b> as a flowchart</h1>
+    <p class="lead">As long as the review asks for changes, the loop of editing and resubmitting keeps running. Only an approval leads to publishing.</p>
+  </header>
+
+  <section class="legend" aria-label="Symbols">
+    <h2>Symbols</h2>
+    <ul>
+      <li><span class="sym action"></span><span><b>Action</b> · something is done</span></li>
+      <li><span class="sym decision"></span><span><b>Decision</b> · several exits</span></li>
+      <li><span class="sym loopback"></span><span><b>Loop-back</b> · path returns</span></li>
+      <li><span class="chip local">Author</span><span>the person writing</span></li>
+      <li><span class="chip remote">System</span><span>shared workspace</span></li>
+      <li><span class="chip review">Reviewer</span><span>second person</span></li>
+    </ul>
+  </section>
+
+  <section class="phase">
+    <h2>Flow</h2>
+    <div class="fc">
+      <div class="node"><div class="node-head"><span class="sym action"></span><p class="when">Step 1</p><span class="chip local">Author</span></div><h3>Create a draft</h3><p>The author works on a separate copy. The published version stays untouched until the draft is approved.</p><div class="box concrete"><span class="label">Concrete</span>Like a photocopy of a file on your own desk: the original in the cabinet stays as it is until the copy is signed off.</div></div>
+      <div class="link"></div>
+
+      <div class="loop">
+        <div class="loop-head"><span class="arrow"></span><div class="node"><div class="node-head"><span class="sym action"></span><p class="when">Step 2</p><span class="chip local">Author</span></div><h3>Edit the draft</h3><p>Each change is saved with a short note, so every state can be traced individually.</p></div></div>
+        <div class="loop-body">
+          <div class="link"></div>
+          <div class="node"><div class="node-head"><span class="sym action"></span><p class="when">Step 3</p><span class="chip local">Author</span></div><h3>Upload</h3><p>The draft is uploaded to the shared workspace and becomes visible to others.</p></div>
+          <div class="link"></div>
+          <div class="node"><div class="node-head"><span class="sym action"></span><p class="when">Step 4</p><span class="chip remote">System</span></div><h3>Request review</h3><p>The request asks to adopt the draft as the official version. Changes, discussion and results come together in one place.</p></div>
+          <div class="link"></div>
+        </div>
+        <div class="loop-tail"><div class="node decision"><div class="node-head"><span class="sym decision"></span><p class="when">Step 5</p><span class="chip review">Reviewer</span></div><h3>Review</h3><p>A second person reads the changes, comments on individual passages and decides.</p><ul class="outs"><li><b>Approved:</b> continue with step 6.</li><li><b>Changes requested:</b> back to step 2. The request stays open, step 4 is skipped. Every further upload updates it automatically.</li></ul></div></div>
+      </div>
+
+      <div class="exit"><div class="link"></div><span class="tag">Approved</span></div>
+      <div class="node"><div class="node-head"><span class="sym action"></span><p class="when">Step 6</p><span class="chip remote">System</span></div><h3>Publish</h3><p>The draft becomes the official version. If mandatory checks are configured, they must have passed beforehand.</p></div>
+      <div class="link"></div>
+      <div class="node"><div class="node-head"><span class="sym action"></span><p class="when">Step 7</p><span class="chip remote">System</span></div><h3>Remove the draft</h3><p>The finished draft is deleted. The history stays attached to the request.</p></div>
+      <div class="link"></div>
+      <div class="node"><div class="node-head"><span class="sym action"></span><p class="when">Step 8</p><span class="chip local">Author</span></div><h3>Refresh your copy</h3><p>The author pulls the new official version so the next change starts from the current state.</p></div>
+    </div>
+  </section>
+
+  <section class="open-list">
+    <h2>Open</h2>
+    <ul>
+      <li>Whether a second person reviews in your setup is not known. When working alone, the reviewer role drops out and the request itself serves as the checkpoint.</li>
+      <li>Whether mandatory checks or protection rules exist is not known. The flow shows the standard case, not your setup.</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>

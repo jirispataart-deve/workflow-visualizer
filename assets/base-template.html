@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Workflow</title>
+<style>
+  /* Layout: one column, axis on the left, phases with marker bars, steps as entries along the axis.
+     Deliberately single-theme: all colors are set explicitly so it reads the same in light and dark UIs.
+     To use your own brand, change only the tokens in :root. */
+  :root {
+    --paper: #f6f5f1;
+    --paper-shade: #e7e5dd;
+    --rule: #d3d1c9;
+    --ink: #1a1a1a;
+    --graphite: #4b4b49;
+    --accent: #cfe0ff;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--graphite);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+    padding-block: 40px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  /* Header */
+  .kicker {
+    margin: 0 0 12px;
+    font-size: 12px; font-weight: 400; letter-spacing: 0.4em; text-transform: uppercase;
+    color: var(--graphite);
+  }
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(28px, 7vw, 44px); font-weight: 300; line-height: 1.1; color: var(--ink);
+    text-wrap: balance;
+  }
+  h1 b { font-weight: 700; }
+  .lead { margin: 0; font-size: 16px; line-height: 1.65; color: var(--ink); max-width: 62ch; }
+
+  /* Legend */
+  .legend { margin-top: 40px; border-top: 2px solid var(--ink); padding-top: 16px; }
+  .legend h2, .phase h2 {
+    margin: 0 0 12px;
+    font-size: 14px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink);
+  }
+  .legend ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px 24px; }
+  .legend li { display: flex; align-items: center; gap: 12px; font-size: 13px; line-height: 1.35; }
+  .legend li b { color: var(--ink); font-weight: 700; letter-spacing: 0.04em; }
+
+  /* Symbols (all angular, drawn in CSS) */
+  .sym { flex: none; width: 14px; height: 14px; display: inline-block; }
+  .sym.action { background: var(--ink); }
+  .sym.decision { border: 2px solid var(--ink); background: var(--paper); }
+  .sym.checkpoint { background: var(--ink); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+  .sym.handoff { background: var(--ink); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  .sym.wait { height: 6px; background: var(--ink); margin-block: 4px; }
+  .sym.open { border: 2px dashed var(--graphite); background: var(--paper); }
+
+  /* Phases */
+  .phase { margin-top: 48px; }
+  .phase h2 { position: relative; display: inline-block; z-index: 0; margin-bottom: 24px; }
+  .phase h2::before {
+    content: ""; position: absolute; left: -6px; right: -6px; bottom: 0; height: 10px;
+    background: var(--accent); z-index: -1;
+  }
+
+  /* Axis */
+  .axis { list-style: none; margin: 0; padding: 0 0 0 32px; position: relative; }
+  .axis::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--ink); }
+  .step { position: relative; padding-bottom: 40px; min-width: 0; }
+  .step:last-child { padding-bottom: 0; }
+  .step > .sym { position: absolute; left: -32px; top: 4px; background-clip: padding-box; outline: 6px solid var(--paper); }
+  .when { margin: 0 0 4px; font-size: 17px; font-weight: 700; letter-spacing: 0.02em; line-height: 1.2; color: var(--ink); }
+  .step h3 { margin: 0 0 6px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.35; color: var(--ink); }
+  .step p { margin: 0; max-width: 62ch; }
+
+  /* Info boxes */
+  .box { margin-top: 14px; max-width: 62ch; padding: 12px 16px; font-size: 14px; line-height: 1.55; }
+  .box .label { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink); }
+  .box.important { background: var(--paper-shade); color: var(--ink); }
+  .box.concrete { border: 1px solid var(--ink); color: var(--ink); }
+
+  /* Open points */
+  .open-list { margin: 48px 0 0; border-top: 1px solid var(--rule); padding-top: 16px; }
+  .open-list h2 { margin: 0 0 10px; font-size: 14px; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink); }
+  .open-list ul { margin: 0; padding: 0; list-style: none; }
+  .open-list li { position: relative; padding-left: 18px; margin-bottom: 6px; font-size: 14px; }
+  .open-list li::before { content: ""; position: absolute; left: 0; top: 9px; width: 5px; height: 5px; background: var(--ink); }
+</style>
+</head>
+<body>
+<!--
+  TEMPLATE: replace placeholders in [square brackets]; duplicate steps as needed.
+  - Exactly one symbol per step: action | decision | checkpoint | handoff | wait | open
+  - Legend lists only the symbols that actually appear.
+  - Time marker only with a documented duration or point in time, otherwise "Step N".
+  - Info boxes (important, concrete) only where they add something, otherwise omit.
+  - Section "Open" only if something is open.
+-->
+<div class="wrap">
+  <header>
+    <p class="kicker">Workflow</p>
+    <h1><b>[Name]</b> [Subtitle in light weight]</h1>
+    <p class="lead">[One sentence: what is achieved, by whom, with what.]</p>
+  </header>
+
+  <section class="legend" aria-label="Symbols">
+    <h2>Symbols</h2>
+    <ul>
+      <li><span class="sym action"></span><span><b>Action</b> · something is done</span></li>
+      <li><span class="sym decision"></span><span><b>Decision</b> · the flow branches</span></li>
+      <li><span class="sym checkpoint"></span><span><b>Checkpoint</b> · check, approval</span></li>
+      <li><span class="sym handoff"></span><span><b>Handoff</b> · result moves on</span></li>
+      <li><span class="sym wait"></span><span><b>Wait</b> · time passes</span></li>
+      <li><span class="sym open"></span><span><b>Open</b> · information missing</span></li>
+    </ul>
+  </section>
+
+  <section class="phase">
+    <h2>[Phase 1]</h2>
+    <ol class="axis">
+      <li class="step">
+        <span class="sym action"></span>
+        <p class="when">[Step 1 or documented duration]</p>
+        <h3>[Title]</h3>
+        <p>[What happens and why.]</p>
+        <div class="box important"><span class="label">Important</span>[Prerequisite or source of error.]</div>
+      </li>
+      <li class="step">
+        <span class="sym checkpoint"></span>
+        <p class="when">[Step 2]</p>
+        <h3>[Title]</h3>
+        <p>[What happens and why.]</p>
+        <div class="box concrete"><span class="label">Concrete</span>[A tangible image or example.]</div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="open-list">
+    <h2>Open</h2>
+    <ul>
+      <li>[What is missing or unverified.]</li>
+    </ul>
+  </section>
+</div>
+</body>
+</html>
